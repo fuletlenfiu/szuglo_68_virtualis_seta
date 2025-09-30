@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Virtuális bejárás – Admin drag & drop</title>
+  <script src="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #alaprajz-container { position: relative; width: 800px; }
+    #alaprajz-container img { width: 800px; display: block; }
+    .hotspot {
+      position: absolute; width: 20px; height: 20px;
+      background: red; border-radius: 50%; cursor: pointer;
+      border: 2px solid white;
+    }
+    .hotspot.admin { cursor: grab; }
+
+    /* 🔹 Panorámakép 3:2 arányban */
+    #panorama {
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Virtuális bejárás</h2>
+
+<!-- Admin kód bekérés -->
+<label for="adminkod">Admin kód:</label>
+<input type="password" id="adminkod" placeholder="Írd be a kódot">
+<button onclick="checkAdmin()">Belépés</button>
+<span id="adminstatus" style="margin-left:10px;color:green;"></span>
+
+<!-- Legördülő menü az alaprajz kiválasztásához -->
+<br><br>
+<label for="tervvalaszto">Válassz alaprajzot:</label>
+<select id="tervvalaszto" onchange="changePlan()">
+  <option value="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/01_bont%C3%A1si%20alaprajz.jpg">01 – Bontási alaprajz</option>
+  <option value="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/02_b%C3%BAtorozott%20alaprajz.jpg">02 – Bútorozott alaprajz</option>
+  <option value="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/03_elektromos%20alaprajz.jpg">03 – Elektromos alaprajz</option>
+  <option value="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/04_g%C3%A9p%C3%A9sz%20alaprajz.jpg">04 – Gépész alaprajz</option>
+  <option value="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/05_%C3%A1lmennyezet%20alaprajz.jpg">05 – Álmennyezet alaprajz</option>
+  <option value="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/06_g%C3%A1zterv%20alaprajz.jpg">06 – Gázterv alaprajz</option>
+</select>
+
+<!-- Alaprajz + hotspotok -->
+<div id="alaprajz-container">
+  <img id="alaprajz" src="https://fuletlenfiu.github.io/szuglo_68_virtualis_seta/images/01_bontasi.jpg" alt="Alaprajz">
+
+  <!-- Hotspotok -->
+  <div class="hotspot" id="hs1" data-image="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/1.jpg"></div>
+  <div class="hotspot" id="hs2" data-image="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/2.jpg"></div>
+  <div class="hotspot" id="hs3" data-image="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/3.jpg"></div>
+  <div class="hotspot" id="hs4" data-image="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/4.jpg"></div>
+  <div class="hotspot" id="hs5" data-image="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/5.jpg"></div>
+  <div class="hotspot" id="hs6" data-image="https://raw.githubusercontent.com/fuletlenfiu/szuglo_68_virtualis_seta/refs/heads/main/6.jpg"></div>
+</div>
+
+<h2>Panorámakép</h2>
+<div id="panorama"></div>
+
+<script>
+  // 🔹 Panorama betöltése
+  function loadPanorama(image) {
+    pannellum.viewer('panorama', {
+      type: 'equirectangular',
+      panorama: image,
+      autoLoad: true,
+      hfov: 120   // 🔹 nagyobb alap látószög
+    });
+  }
+
+  // 🔹 Hotspot kattintás -> panoráma betöltés
+  document.querySelectorAll('.hotspot').forEach(hs => {
+    hs.addEventListener('click', () => {
+      loadPanorama(hs.dataset.image);
+    });
+  });
+
+  // 🔹 Legördülő menü alaprajz váltás
+  function changePlan() {
+    var select = document.getElementById("tervvalaszto");
+    var chosenPlan = select.value;
+    document.getElementById("alaprajz").src = chosenPlan;
+  }
+
+  // 🔹 Admin kód ellenőrzés
+  let adminMode = false;
+  function checkAdmin() {
+    const code = document.getElementById("adminkod").value;
+    if(code === "Fülike") {
+      adminMode = true;
+      document.getElementById("adminstatus").textContent = "Admin módban vagy!";
+      document.querySelectorAll('.hotspot').forEach(hs => hs.classList.add('admin'));
+    } else {
+      adminMode = false;
+      document.getElementById("adminstatus").textContent = "Helytelen kód!";
+      document.querySelectorAll('.hotspot').forEach(hs => hs.classList.remove('admin'));
+    }
+  }
+
+  // 🔹 Hotspot pozíciók betöltése localStorage-ből
+  function loadPositions() {
+    const saved = localStorage.getItem("hotspotPositions");
+    if (saved) {
+      const positions = JSON.parse(saved);
+      for (let id in positions) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.top = positions[id].top;
+          el.style.left = positions[id].left;
+        }
+      }
+    } else {
+      // Kezdő pozíciók
+      document.getElementById("hs1").style.top="100px"; document.getElementById("hs1").style.left="150px";
+      document.getElementById("hs2").style.top="200px"; document.getElementById("hs2").style.left="300px";
+      document.getElementById("hs3").style.top="250px"; document.getElementById("hs3").style.left="400px";
+      document.getElementById("hs4").style.top="120px"; document.getElementById("hs4").style.left="350px";
+      document.getElementById("hs5").style.top="180px"; document.getElementById("hs5").style.left="500px";
+      document.getElementById("hs6").style.top="300px"; document.getElementById("hs6").style.left="250px";
+    }
+  }
+
+  // 🔹 Hotspot pozíciók mentése localStorage-be
+  function savePositions() {
+    if(!adminMode) return; // csak admin menthet
+    const positions = {};
+    document.querySelectorAll('.hotspot').forEach(hs => {
+      positions[hs.id] = {
+        top: hs.style.top,
+        left: hs.style.left
+      };
+    });
+    localStorage.setItem("hotspotPositions", JSON.stringify(positions));
+  }
+
+  // 🔹 Drag & Drop (csak admin módban)
+  let active = null, offsetX, offsetY;
+
+  document.querySelectorAll('.hotspot').forEach(hs => {
+    hs.addEventListener('mousedown', e => {
+      if(!adminMode) return;
+      active = hs;
+      offsetX = e.offsetX;
+      offsetY = e.offsetY;
+      hs.style.cursor = "grabbing";
+    });
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (active && adminMode) {
+      const container = document.getElementById('alaprajz-container');
+      const rect = container.getBoundingClientRect();
+      let x = e.clientX - rect.left - offsetX;
+      let y = e.clientY - rect.top - offsetY;
+      active.style.left = x + "px";
+      active.style.top = y + "px";
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (active && adminMode) {
+      active.style.cursor = "grab";
+      savePositions();
+    }
+    active = null;
+  });
+
+  // 🔹 Induláskor betöltjük a pozíciókat
+  loadPositions();
+
+</script>
+
+</body>
+</html>
